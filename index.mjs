@@ -1,4 +1,5 @@
 import AWS from 'aws-sdk';
+import axios from 'axios';
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
@@ -15,25 +16,19 @@ export const handler = async (event) => {
     }).promise();
 
     const users = usersResult.Items.map(item => item.user_id);
-    // Create Lambda service object
-    const lambda = new AWS.Lambda();
 
-    // Construct parameters for the Lambda function; TODO INPUT GABRIEL'S LAMBDA FUNCTION
-    const params = {
-        FunctionName: '......',
-        Payload: JSON.stringify({ 'user_ids': users }) // Payload to send to the function
-    };
+    // Make API request to endpoint
+    axios.post(apiEndpoint, { user_ids: users })
+        .then(response => {
+            // Handle the response from the API
+            const usersWithDistance = response.data;
+            console.log(usersWithDistance);
+        })
+        .catch(error => {
+            // Handle errors
+            console.error(error);
+        });
 
-    // Invoke the Lambda function
-    lambda.invoke(params, (err, data) => {
-        if (err) {
-            console.error(err);
-        } else {
-            // Handle the response from the Lambda function
-            console.log(data.Payload);
-            const usersWithDistance = JSON.parse(data.Payload);
-        }
-    });
 
     // Sort users by distances covered over the last 3 months
     usersWithDistance.sort((a, b) => b.distance_covered - a.distance_covered);
