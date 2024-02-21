@@ -17,18 +17,29 @@ export const handler = async (event) => {
 
     const users = usersResult.Items.map(item => item.user_id);
 
-    // Make API request to endpoint
-    axios.post(apiEndpoint, { user_ids: users })
-        .then(response => {
-            // Handle the response from the API
-            const usersWithDistance = response.data;
-            console.log(usersWithDistance);
-        })
-        .catch(error => {
-            // Handle errors
-            console.error(error);
-        });
+    // // Make API request to endpoint
+    // axios.post(apiEndpoint, { user_ids: users })
+    //     .then(response => {
+    //         // Handle the response from the API
+    //         const usersWithDistance = response.data;
+    //         console.log(usersWithDistance);
+    //     })
+    //     .catch(error => {
+    //         // Handle errors
+    //         console.error(error);
+    //     });
 
+    const usersWithDistance = { 'test_bot_1': 35.0, 'test_bot_97': 12.0, 'f2a262e8-d316-4cfb-81a7-35ce4c740184': 40.1, 'test_bot_2': 86.1 };
+
+    // Convert object to array of key-value pairs
+    const usersArray = Object.entries(usersWithDistance);
+
+    // Sort users by distances covered over the last 3 months
+    usersArray.sort((a, b) => b[1] - a[1]);
+    const usersObject = {};
+    usersArray.forEach(([userId, distanceCovered]) => {
+        usersObject[userId] = { user_id: userId, distance_covered: distanceCovered };
+    });
 
     // Sort users by distances covered over the last 3 months
     usersWithDistance.sort((a, b) => b.distance_covered - a.distance_covered);
