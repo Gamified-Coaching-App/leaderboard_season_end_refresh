@@ -19,7 +19,10 @@ export const handler = async (event) => {
 
     // // Make API request to endpoint
     const userIdsJSON = JSON.stringify({ user_ids: userIds });
-    const apiResponse = await makeApiCall("https://88pqpqlu5f.execute-api.eu-west-2.amazonaws.com/dev_1/3-months-aggregate", userIdsJSON);
+    const apiUrl = "https://88pqpqlu5f.execute-api.eu-west-2.amazonaws.com/dev_1/3-months-aggregate";
+    //const apiResponse = await makeApiCall(apiUrl, userIdsJSON);
+    const apiResponse = await fetchApiData(apiUrl, userIdsJSON);
+
 
     // Convert object to array of key-value pairs
     const usersDistances = Object.entries(apiResponse);
@@ -181,4 +184,30 @@ async function makeApiCall(url, payload) {
         req.write(dataString);
         req.end();
     });
+}
+
+
+// Function to make a POST request API call
+async function fetchApiData(url, payload) {
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: payload
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const responseData = await response.json();
+
+        return responseData; // Return the response data
+    } catch (error) {
+        console.error('There was a problem with the request:', error);
+        throw error; // Rethrow the error for handling at higher level
+    }
 }
