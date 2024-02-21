@@ -1,5 +1,5 @@
 import AWS from 'aws-sdk';
-import axios from 'axios';
+//import axios from 'axios';
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
@@ -15,61 +15,50 @@ export const handler = async (event) => {
         // You may need to adjust the attributes to match your schema
     }).promise();
 
-    const users = usersResult.Items.map(item => item.user_id);
+    const userIds = usersResult.Items.map(item => item.user_id);
 
     // // Make API request to endpoint
-    // axios.post(apiEndpoint, { user_ids: users })
-    //     .then(response => {
-    //         // Handle the response from the API
-    //         const usersWithDistance = response.data;
-    //         console.log(usersWithDistance);
-    //     })
-    //     .catch(error => {
-    //         // Handle errors
-    //         console.error(error);
-    //     });
-
-    const usersWithDistance = { 'test_bot_1': 35.0, 'test_bot_97': 12.0, 'f2a262e8-d316-4cfb-81a7-35ce4c740184': 40.1, 'test_bot_2': 86.1 };
+    const userIdsJSON = JSON.stringify({ user_ids: userIds });
+    const apiResponse = await makeApiCall("https://88pqpqlu5f.execute-api.eu-west-2.amazonaws.com/dev_1/3-months-aggregate", userIdsJSON);
 
     // Convert object to array of key-value pairs
-    const usersArray = Object.entries(usersWithDistance);
+    const usersDistances = Object.entries(apiResponse);
 
-    // Sort users by distances covered over the last 3 months
-    usersArray.sort((a, b) => b[1] - a[1]);
-    const usersObject = {};
-    usersArray.forEach(([userId, distanceCovered]) => {
-        usersObject[userId] = { user_id: userId, distance_covered: distanceCovered };
-    });
+    // Sort the array based on distances in descending order
+    usersDistances.sort((a, b) => b[1] - a[1]);
 
-    // Sort users by distances covered over the last 3 months
-    usersWithDistance.sort((a, b) => b.distance_covered - a.distance_covered);
+    // Reconstruct object from sorted array
+    const sortedObject = Object.fromEntries(entries);
+
+    console.log(sortedObject);
 
     // Generate a map of "users: position" by bucket ID for use later
-    let positionOldMapping = {};
+    // let positionOldMapping = {};
 
     // Reassign buckets ('leaderboard' table has a bucket_id column) -> 10 max per bucket
     let currentBucketId = 1;
     let currentPosition = 1;
 
-    for (const user of usersWithDistance) {
+    // This loop will sett all relevant fields to 0, and update bucket_ids and positions
+    for (const user of Object.keys(sortedObject)) {
         // Update bucket_id for the user
         await dynamoDb.updateItem({
             TableName: 'leaderboard',
-            Key: { "user_id": user.user_id },
+            Key: { "user_id": user },
             UpdateExpression: 'SET bucket_id = :bucketId',
             ExpressionAttributeValues: { ':bucketId': currentBucketId },
         }).promise();
 
         // Add the user to the bucket in question to our dictionary from earlier
-        if (!positionOldMapping[currentBucketId]) {
-            positionOldMapping[currentBucketId] = {};
-        }
-        positionOldMapping[currentBucketId][user.user_id] = currentPosition;
+        // if (!positionOldMapping[currentBucketId]) {
+        //     positionOldMapping[currentBucketId] = {};
+        // }
+        // positionOldMapping[currentBucketId][user] = currentPosition;
 
         // Randomly allocate positions for users in each bucket into the position_new column of 'leaderboard'
         await dynamoDb.updateItem({
             TableName: 'leaderboard',
-            Key: { "user_id": user.user_id },
+            Key: { "user_id": user },
             UpdateExpression: 'SET position_new = :positionNew',
             ExpressionAttributeValues: { ':positionNew': currentPosition },
         }).promise();
@@ -77,7 +66,7 @@ export const handler = async (event) => {
         // Set scores to 0
         await dynamoDb.updateItem({
             TableName: 'leaderboard',
-            Key: { "user_id": user.user_id },
+            Key: { "user_id": user },
             UpdateExpression: 'SET aggregate_skills_season = :zero, endurance_season = :zero, strength_season = :zero',
             ExpressionAttributeValues: { ':zero': 0 },
         }).promise();
@@ -92,33 +81,105 @@ export const handler = async (event) => {
         }
     }
 
+    // Create an AWS Lambda service object
+    const lambda = new AWS.Lambda();
+
+    // Define parameters for invoking the leaderboard_refresh_old_positions function
+    const params_leaderboard_refresh_old_positions = {
+        FunctionName: 'leaderboard_refresh_old_positions',
+        InvocationType: 'Event', // Or 'RequestResponse' if you want to wait for the response
+        Payload: JSON.stringify({}) // Payload to pass to the function
+    };
+
+    // Define parameters for invoking the leaderboard_refresh_old_positions function
+    const params_leaderboard_bucket_average = {
+        FunctionName: 'leaderboard_bucket_average',
+        InvocationType: 'Event', // Or 'RequestResponse' if you want to wait for the response
+        Payload: JSON.stringify({}) // Payload to pass to the function
+    };
+
+    // Invoke the Lambda functions sequentially
+
+    try {
+        await lambda.invoke(params_leaderboard_refresh_old_positions).promise();
+        console.log("leaderboard old positions updated!");
+        await lambda.invoke(params_leaderboard_bucket_average).promise();
+        console.log("new leaderboard bucket kms pushed to challenges!");
+
+    } catch (err) {
+        console.error(err);
+    }
+
     // Set position_old
-    dynamoDb.scan({ TableName: 'leaderboard' }, (err, data) => {
-        if (err) {
-            console.error("Error scanning table:", err);
-        } else {
-            // Update each item individually
-            data.Items.forEach(item => {
-                const bucketId = item.bucket_id;
-                const newPositionOld = positionOldMapping[bucketId] ? positionOldMapping[bucketId] : null;
-                if (newPositionOld !== null) {
-                    const params = {
-                        TableName: tableName,
-                        Key: { "user_id": item.user_id },
-                        UpdateExpression: "SET position_old = :newPositionOld",
-                        ExpressionAttributeValues: { ":newPositionOld": newPositionOld },
-                    };
-                    dynamoDb.update(params, (err, data) => {
-                        if (err) {
-                            console.error("Error updating item:", err);
-                        } else {
-                            console.log("Item updated successfully:", data);
-                        }
-                    });
-                }
-            });
-        }
-    });
+    // dynamoDb.scan({ TableName: 'leaderboard' }, (err, data) => {
+    //     if (err) {
+    //         console.error("Error scanning table:", err);
+    //     } else {
+    //         // Update each item individually
+    //         data.Items.forEach(item => {
+    //             const bucketId = item.bucket_id;
+    //             const newPositionOld = positionOldMapping[bucketId] ? positionOldMapping[bucketId] : null;
+    //             if (newPositionOld !== null) {
+    //                 const params = {
+    //                     TableName: tableName,
+    //                     Key: { "user_id": item.user_id },
+    //                     UpdateExpression: "SET position_old = :newPositionOld",
+    //                     ExpressionAttributeValues: { ":newPositionOld": newPositionOld },
+    //                 };
+    //                 dynamoDb.update(params, (err, data) => {
+    //                     if (err) {
+    //                         console.error("Error updating item:", err);
+    //                     } else {
+    //                         console.log("Item updated successfully:", data);
+    //                     }
+    //                 });
+    //             }
+    //         });
+    //     }
+    // });
 
     return;
+}
+
+
+// Function to make a POST request API call
+async function makeApiCall(url, payload) {
+    return new Promise((resolve, reject) => {
+        const dataString = JSON.stringify(payload);
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': dataString.length,
+            },
+        };
+
+        const req = https.request(url, options, (res) => {
+            let response = '';
+
+            res.on('data', (chunk) => {
+                response += chunk;
+            });
+
+            res.on('end', () => {
+                console.log("API call ended with response:", response);
+                try {
+                    const jsonResponse = JSON.parse(response);
+                    resolve(jsonResponse);
+                } catch (parseError) {
+                    console.error("Error parsing API response:", parseError);
+                    reject(parseError);
+                }
+            });
+        });
+
+        req.on('error', (e) => {
+            console.error("API call error:", e);
+            reject(e);
+        });
+
+        // Send the request with the payload
+        req.write(dataString);
+        req.end();
+    });
 }
