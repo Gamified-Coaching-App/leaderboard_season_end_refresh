@@ -91,7 +91,7 @@ export const handler = async (event) => {
         Payload: JSON.stringify({}) // Payload to pass to the function
     };
 
-    // Define parameters for invoking the leaderboard_refresh_old_positions function
+    // Define parameters for invoking the leaderboard_bucket_average function
     const params_leaderboard_bucket_average = {
         FunctionName: 'leaderboard_bucket_average',
         InvocationType: 'Event', // Or 'RequestResponse' if you want to wait for the response
@@ -99,7 +99,6 @@ export const handler = async (event) => {
     };
 
     // Invoke the Lambda functions sequentially
-
     try {
         await lambda.invoke(params_leaderboard_refresh_old_positions).promise();
         console.log("leaderboard old positions updated!");
