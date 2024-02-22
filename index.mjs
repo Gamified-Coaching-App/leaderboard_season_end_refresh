@@ -31,7 +31,7 @@ export const handler = async (event) => {
     usersDistances.sort((a, b) => b[1] - a[1]);
 
     // Reconstruct object from sorted array
-    const sortedObject = Object.fromEntries(entries);
+    const sortedObject = Object.fromEntries(usersDistances);
 
     console.log(sortedObject);
 
