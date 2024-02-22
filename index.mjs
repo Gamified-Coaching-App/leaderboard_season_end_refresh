@@ -45,7 +45,7 @@ export const handler = async (event) => {
     // This loop will sett all relevant fields to 0, and update bucket_ids and positions
     for (const user of Object.keys(sortedObject)) {
         // Update bucket_id for the user
-        await dynamoDb.updateItem({
+        await dynamoDb.update({
             TableName: 'leaderboard',
             Key: { "user_id": user },
             UpdateExpression: 'SET bucket_id = :bucketId',
@@ -59,7 +59,7 @@ export const handler = async (event) => {
         // positionOldMapping[currentBucketId][user] = currentPosition;
 
         // Randomly allocate positions for users in each bucket into the position_new column of 'leaderboard'
-        await dynamoDb.updateItem({
+        await dynamoDb.update({
             TableName: 'leaderboard',
             Key: { "user_id": user },
             UpdateExpression: 'SET position_new = :positionNew',
@@ -67,7 +67,7 @@ export const handler = async (event) => {
         }).promise();
 
         // Set scores to 0
-        await dynamoDb.updateItem({
+        await dynamoDb.update({
             TableName: 'leaderboard',
             Key: { "user_id": user },
             UpdateExpression: 'SET aggregate_skills_season = :zero, endurance_season = :zero, strength_season = :zero',
