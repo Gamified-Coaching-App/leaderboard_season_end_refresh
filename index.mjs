@@ -3,7 +3,7 @@ import AWS from 'aws-sdk';
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-const BUCKET_SIZE = 10;
+const BUCKET_SIZE = 5;
 
 export const handler = async (event) => {
     // trigger at season end -> eventbridge trigger or cloudwatch event rule
