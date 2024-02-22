@@ -49,7 +49,7 @@ export const handler = async (event) => {
             TableName: 'leaderboard',
             Key: { "user_id": user },
             UpdateExpression: 'SET bucket_id = :bucketId',
-            ExpressionAttributeValues: { ':bucketId': currentBucketId },
+            ExpressionAttributeValues: { ':bucketId':String(currentBucketId) },
         }).promise();
 
         // Add the user to the bucket in question to our dictionary from earlier
