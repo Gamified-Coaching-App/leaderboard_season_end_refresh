@@ -20,7 +20,6 @@ export const handler = async (event) => {
     // // Make API request to endpoint
     const userIdsJSON = JSON.stringify({ user_ids: userIds });
     const apiUrl = "https://88pqpqlu5f.execute-api.eu-west-2.amazonaws.com/dev_1/3-months-aggregate";
-    //const apiResponse = await makeApiCall(apiUrl, userIdsJSON);
     const apiResponse = await fetchApiData(apiUrl, userIdsJSON);
 
 
@@ -145,50 +144,7 @@ export const handler = async (event) => {
 
 
 // Function to make a POST request API call
-async function makeApiCall(url, payload) {
-    return new Promise((resolve, reject) => {
-        const dataString = JSON.stringify(payload);
-        const options = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': dataString.length,
-            },
-        };
-
-        const req = https.request(url, options, (res) => {
-            let response = '';
-
-            res.on('data', (chunk) => {
-                response += chunk;
-            });
-
-            res.on('end', () => {
-                console.log("API call ended with response:", response);
-                try {
-                    const jsonResponse = JSON.parse(response);
-                    resolve(jsonResponse);
-                } catch (parseError) {
-                    console.error("Error parsing API response:", parseError);
-                    reject(parseError);
-                }
-            });
-        });
-
-        req.on('error', (e) => {
-            console.error("API call error:", e);
-            reject(e);
-        });
-
-        // Send the request with the payload
-        req.write(dataString);
-        req.end();
-    });
-}
-
-
-// Function to make a POST request API call
-async function fetchApiData(url, payload) {
+export async function fetchApiData(url, payload) {
 
     try {
         const response = await fetch(url, {
