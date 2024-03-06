@@ -1,4 +1,5 @@
 import AWS from 'aws-sdk';
+import { fetchApiData } from './utils.mjs';
 //import axios from 'axios';
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
