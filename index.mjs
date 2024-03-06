@@ -65,20 +65,12 @@ export const handler = async (event) => {
         }
         positionOldMapping[currentBucketId][user] = currentPosition;
 
-        // Randomly allocate positions for users in each bucket into the position_new column of 'leaderboard'
+        // Randomly allocate positions for users in each bucket into the position_new column of 'leaderboard' and set scores to 0
         await dynamoDb.update({
             TableName: 'leaderboard',
             Key: { "user_id": user },
-            UpdateExpression: 'SET position_new = :positionNew',
-            ExpressionAttributeValues: { ':positionNew': currentPosition },
-        }).promise();
-
-        // Set scores to 0
-        await dynamoDb.update({
-            TableName: 'leaderboard',
-            Key: { "user_id": user },
-            UpdateExpression: 'SET aggregate_skills_season = :zero, endurance_season = :zero, strength_season = :zero',
-            ExpressionAttributeValues: { ':zero': 0 },
+            UpdateExpression: 'SET position_new = :positionNew, aggregate_skills_season = :zero, endurance_season = :zero, strength_season = :zero',
+            ExpressionAttributeValues: { ':positionNew': currentPosition, ':zero': 0 },
         }).promise();
 
         // Increment currentPosition
@@ -94,13 +86,6 @@ export const handler = async (event) => {
     // Create an AWS Lambda service object
     const lambda = new AWS.Lambda();
 
-    // Define parameters for invoking the leaderboard_refresh_old_positions function
-    const params_leaderboard_refresh_old_positions = {
-        FunctionName: 'leaderboard_refresh_old_positions',
-        InvocationType: 'Event',
-        Payload: JSON.stringify({}) // Payload to pass to the function
-    };
-
     // Define parameters for invoking the leaderboard_bucket_average function
     const params_leaderboard_bucket_average = {
         FunctionName: 'leaderboard_bucket_average',
@@ -110,8 +95,6 @@ export const handler = async (event) => {
 
     // Invoke the Lambda functions sequentially
     try {
-        await lambda.invoke(params_leaderboard_refresh_old_positions).promise();
-        console.log("leaderboard old positions updated!");
         await lambda.invoke(params_leaderboard_bucket_average).promise();
         console.log("new leaderboard bucket kms pushed to challenges!");
 

@@ -58,12 +58,8 @@ describe('Lambda Function Tests', () => {
         // Assertions for DynamoDB operations
         expect(AWS.scanMock).toHaveBeenCalledTimes(1);
         // expect(AWS.DynamoDB.DocumentClient.scan).toHaveBeenCalledTimes(1);
-        expect(AWS.updateMock).toHaveBeenCalledTimes(6);
-        // expect(AWS.scanMock.mock.calls[0][0].TableName).toBe('leaderboard');
-        // expect(AWS.scanMock).toHaveBeenCalledWith({
-        //     TableName: 'leaderboard',
-        //     ProjectionExpression: 'user_id',
-        // });
+        expect(AWS.updateMock).toHaveBeenCalledTimes(3);
+
 
         // Assertions for API request
         expect(fetchApiData).toHaveBeenCalledTimes(1);
@@ -73,7 +69,7 @@ describe('Lambda Function Tests', () => {
         );
 
         // Assertions for Lambda invocations
-        expect(AWS.lambdaInvokeMock).toHaveBeenCalledTimes(2);
+        expect(AWS.lambdaInvokeMock).toHaveBeenCalledTimes(1);
         // console.log(AWS.lambdaInvokeMock.mock);
 
     });
