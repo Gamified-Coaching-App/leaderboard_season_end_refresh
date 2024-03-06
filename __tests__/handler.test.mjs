@@ -58,7 +58,7 @@ describe('Lambda Function Tests', () => {
         // Assertions for DynamoDB operations
         expect(AWS.scanMock).toHaveBeenCalledTimes(1);
         // expect(AWS.DynamoDB.DocumentClient.scan).toHaveBeenCalledTimes(1);
-        expect(AWS.updateMock).toHaveBeenCalledTimes(3);
+        expect(AWS.updateMock).toHaveBeenCalledTimes(4);
 
 
         // Assertions for API request
