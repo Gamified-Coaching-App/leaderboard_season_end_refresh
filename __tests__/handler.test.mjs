@@ -1,5 +1,6 @@
 import AWS from 'aws-sdk';
 import { handler } from '../index.mjs';
+import { fetchApiData } from '../utils.mjs';
 
 // Resetting modules to ensure a clean mock state
 beforeEach(() => {
@@ -7,12 +8,18 @@ beforeEach(() => {
     jest.clearAllMocks();
 });
 
+jest.mock('../utils.mjs', () => ({
+    ...jest.requireActual('../utils.mjs'), // Preserve other exports if needed
+    fetchApiData: jest.fn()
+}));
+
+
 // Mock the entire AWS SDK
 jest.mock('aws-sdk', () => {
     const scanMock = jest.fn();
     const updateMock = jest.fn();
     const lambdaInvokeMock = jest.fn();
-    
+
     return {
         DynamoDB: {
             DocumentClient: jest.fn(() => ({
@@ -44,7 +51,7 @@ describe('Lambda Function Tests', () => {
         AWS.scanMock.mockResolvedValueOnce(mockScanResponse);
 
         // Setting up mock behavior for fetchApiData
-        global.fetchApiData = jest.fn().mockResolvedValueOnce(mockFetchApiDataResponse);
+        fetchApiData.mockResolvedValueOnce(mockFetchApiDataResponse);
 
         await handler();
 
@@ -59,8 +66,8 @@ describe('Lambda Function Tests', () => {
         // });
 
         // Assertions for API request
-        expect(global.fetchApiData).toHaveBeenCalledTimes(1);
-        expect(global.fetchApiData).toHaveBeenCalledWith(
+        expect(fetchApiData).toHaveBeenCalledTimes(1);
+        expect(fetchApiData).toHaveBeenCalledWith(
             'https://88pqpqlu5f.execute-api.eu-west-2.amazonaws.com/dev_1/3-months-aggregate',
             JSON.stringify({ user_ids: ['user1', 'user2'] })
         );
@@ -81,14 +88,14 @@ describe('Lambda Function Tests', () => {
     it('should handle errors from API request', async () => {
         AWS.scanMock.mockResolvedValueOnce(mockScanResponse);
         // Mocking a failure response for the API request
-        global.fetchApiData = jest.fn().mockRejectedValueOnce(new Error('API request failed'));
+        fetchApiData.mockRejectedValueOnce(new Error('API request failed'));
 
         await expect(handler()).rejects.toThrow('API request failed');
     });
 
     it('should handle errors from Lambda invocation', async () => {
         AWS.scanMock.mockResolvedValueOnce(mockScanResponse);
-        global.fetchApiData = jest.fn().mockResolvedValueOnce(mockFetchApiDataResponse);
+        fetchApiData.mockResolvedValueOnce(mockFetchApiDataResponse);
 
         // Mocking a failure response for Lambda invocation
         AWS.lambdaInvokeMock.mockRejectedValueOnce(new Error('Lambda invocation failed'));

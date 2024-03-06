@@ -30,7 +30,7 @@ export const handler = async (event) => {
     const apiUrl = "https://88pqpqlu5f.execute-api.eu-west-2.amazonaws.com/dev_1/3-months-aggregate";
     const apiResponse = await fetchApiData(apiUrl, userIdsJSON);
 
-
+    console.log(apiResponse);
     // Convert object to array of key-value pairs
     const usersDistances = Object.entries(apiResponse);
 
