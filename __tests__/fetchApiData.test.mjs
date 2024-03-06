@@ -1,4 +1,4 @@
-import { fetchApiData } from '../index.mjs';
+import { fetchApiData } from '../utils.mjs';
 
 describe('fetchApiData function tests', () => {
     const url = 'https://api.example.com/data';

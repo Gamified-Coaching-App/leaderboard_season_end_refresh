@@ -9,12 +9,19 @@ export const handler = async (event) => {
     // trigger at season end -> eventbridge trigger or cloudwatch event rule
     // Get 3m rolling distance covered for all user_ids in 'leaderboard' table. Sort in descending order
     // Get user ids from 'leaderboard' table
-    const usersResult = await dynamoDb.scan({
-        TableName: 'leaderboard',
-        ProjectionExpression: 'user_id',
-        
-    }).promise();
+    let usersResult;
+    try {
+        usersResult = await dynamoDb.scan({
+            TableName: 'leaderboard',
+            ProjectionExpression: 'user_id',
+        }).promise();
+    } catch (error) {
+        // Handle the error
+        console.error('DynamoDB scan failed');
+        throw error;
+    }
 
+    console.log(usersResult);
     const userIds = usersResult.Items.map(item => item.user_id);
 
     // // Make API request to endpoint
@@ -48,7 +55,7 @@ export const handler = async (event) => {
             TableName: 'leaderboard',
             Key: { "user_id": user },
             UpdateExpression: 'SET bucket_id = :bucketId',
-            ExpressionAttributeValues: { ':bucketId':String(currentBucketId) },
+            ExpressionAttributeValues: { ':bucketId': String(currentBucketId) },
         }).promise();
 
         // Add the user to the bucket in question to our dictionary from earlier
@@ -89,14 +96,14 @@ export const handler = async (event) => {
     // Define parameters for invoking the leaderboard_refresh_old_positions function
     const params_leaderboard_refresh_old_positions = {
         FunctionName: 'leaderboard_refresh_old_positions',
-        InvocationType: 'Event', 
+        InvocationType: 'Event',
         Payload: JSON.stringify({}) // Payload to pass to the function
     };
 
     // Define parameters for invoking the leaderboard_bucket_average function
     const params_leaderboard_bucket_average = {
         FunctionName: 'leaderboard_bucket_average',
-        InvocationType: 'Event', 
+        InvocationType: 'Event',
         Payload: JSON.stringify({}) // Payload to pass to the function
     };
 
@@ -108,7 +115,8 @@ export const handler = async (event) => {
         console.log("new leaderboard bucket kms pushed to challenges!");
 
     } catch (err) {
-        console.error(err);
+        console.error('Lambda invocation failed');
+        throw err;
     }
 
     // Set position_old
@@ -140,30 +148,4 @@ export const handler = async (event) => {
     });
 
     return;
-}
-
-
-// Function to make a POST request API call
-export async function fetchApiData(url, payload) {
-
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: payload
-        });
-
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-
-        const responseData = await response.json();
-
-        return responseData; // Return the response data
-    } catch (error) {
-        console.error('There was a problem with the request:', error);
-        throw error; // Rethrow the error for handling at higher level
-    }
 }
