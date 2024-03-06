@@ -12,7 +12,7 @@ export const handler = async (event) => {
     const usersResult = await dynamoDb.scan({
         TableName: 'leaderboard',
         ProjectionExpression: 'user_id',
-        // You may need to adjust the attributes to match your schema
+        
     }).promise();
 
     const userIds = usersResult.Items.map(item => item.user_id);
