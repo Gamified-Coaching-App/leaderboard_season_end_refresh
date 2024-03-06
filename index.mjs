@@ -35,7 +35,7 @@ export const handler = async (event) => {
     console.log(sortedObject);
 
     // Generate a map of "users: position" by bucket ID for use later
-    // let positionOldMapping = {};
+    let positionOldMapping = {};
 
     // Reassign buckets ('leaderboard' table has a bucket_id column) -> 10 max per bucket
     let currentBucketId = 1;
@@ -52,10 +52,10 @@ export const handler = async (event) => {
         }).promise();
 
         // Add the user to the bucket in question to our dictionary from earlier
-        // if (!positionOldMapping[currentBucketId]) {
-        //     positionOldMapping[currentBucketId] = {};
-        // }
-        // positionOldMapping[currentBucketId][user] = currentPosition;
+        if (!positionOldMapping[currentBucketId]) {
+            positionOldMapping[currentBucketId] = {};
+        }
+        positionOldMapping[currentBucketId][user] = currentPosition;
 
         // Randomly allocate positions for users in each bucket into the position_new column of 'leaderboard'
         await dynamoDb.update({
@@ -89,14 +89,14 @@ export const handler = async (event) => {
     // Define parameters for invoking the leaderboard_refresh_old_positions function
     const params_leaderboard_refresh_old_positions = {
         FunctionName: 'leaderboard_refresh_old_positions',
-        InvocationType: 'Event', // Or 'RequestResponse' if you want to wait for the response
+        InvocationType: 'Event', 
         Payload: JSON.stringify({}) // Payload to pass to the function
     };
 
     // Define parameters for invoking the leaderboard_bucket_average function
     const params_leaderboard_bucket_average = {
         FunctionName: 'leaderboard_bucket_average',
-        InvocationType: 'Event', // Or 'RequestResponse' if you want to wait for the response
+        InvocationType: 'Event', 
         Payload: JSON.stringify({}) // Payload to pass to the function
     };
 
@@ -112,32 +112,32 @@ export const handler = async (event) => {
     }
 
     // Set position_old
-    // dynamoDb.scan({ TableName: 'leaderboard' }, (err, data) => {
-    //     if (err) {
-    //         console.error("Error scanning table:", err);
-    //     } else {
-    //         // Update each item individually
-    //         data.Items.forEach(item => {
-    //             const bucketId = item.bucket_id;
-    //             const newPositionOld = positionOldMapping[bucketId] ? positionOldMapping[bucketId] : null;
-    //             if (newPositionOld !== null) {
-    //                 const params = {
-    //                     TableName: tableName,
-    //                     Key: { "user_id": item.user_id },
-    //                     UpdateExpression: "SET position_old = :newPositionOld",
-    //                     ExpressionAttributeValues: { ":newPositionOld": newPositionOld },
-    //                 };
-    //                 dynamoDb.update(params, (err, data) => {
-    //                     if (err) {
-    //                         console.error("Error updating item:", err);
-    //                     } else {
-    //                         console.log("Item updated successfully:", data);
-    //                     }
-    //                 });
-    //             }
-    //         });
-    //     }
-    // });
+    dynamoDb.scan({ TableName: 'leaderboard' }, (err, data) => {
+        if (err) {
+            console.error("Error scanning table:", err);
+        } else {
+            // Update each item individually
+            data.Items.forEach(item => {
+                const bucketId = item.bucket_id;
+                const newPositionOld = positionOldMapping[bucketId] ? positionOldMapping[bucketId] : null;
+                if (newPositionOld !== null) {
+                    const params = {
+                        TableName: tableName,
+                        Key: { "user_id": item.user_id },
+                        UpdateExpression: "SET position_old = :newPositionOld",
+                        ExpressionAttributeValues: { ":newPositionOld": newPositionOld },
+                    };
+                    dynamoDb.update(params, (err, data) => {
+                        if (err) {
+                            console.error("Error updating item:", err);
+                        } else {
+                            console.log("Item updated successfully:", data);
+                        }
+                    });
+                }
+            });
+        }
+    });
 
     return;
 }
